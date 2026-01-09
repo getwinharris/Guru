@@ -194,3 +194,210 @@ export interface CourseProgress {
   completedModules: string[];
   lastAccessed: number;
 }
+
+// ============================================
+// DIAGNOSTIC MENTOR LOOP TYPES
+// ============================================
+
+export type DiagnosticStage = 'observe' | 'baseline' | 'questions' | 'pain_points' | 'frame' | 'guide' | 'complete';
+
+export interface DiagnosticSession {
+  id: string;
+  userId: string;
+  threadId: string;
+  stage: DiagnosticStage;
+  domain: string;
+  problemType?: string;
+  
+  // Collected data
+  observation: ObservationData;
+  baseline?: BaselineData;
+  userProfile?: UserDiagnosticProfile;
+  painPoints?: PainPoint[];
+  problemFrame?: ProblemFrame;
+  
+  // Metadata
+  createdAt: number;
+  updatedAt: number;
+  completedAt?: number;
+  feedback?: DiagnosticFeedback;
+}
+
+export interface ObservationData {
+  description: string;
+  files?: Array<{ type: string; url: string; }>;
+  images?: Array<{ url: string; description?: string; }>;
+  evidence: string[];
+  metadata?: Record<string, any>;
+}
+
+export interface BaselineData {
+  whatWorks: string[];
+  whatDoesntWork: string[];
+  previousAttempts: string[];
+  constraints: ConstraintInfo[];
+  applicableStandards: string[];
+}
+
+export interface ConstraintInfo {
+  type: 'time' | 'budget' | 'skill' | 'tools' | 'environment' | 'other';
+  value: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface UserDiagnosticProfile {
+  userId: string;
+  learningStyle: 'visual' | 'conceptual' | 'hands-on' | 'hybrid';
+  learnsBest: string[];
+  frustratedBy: string[];
+  skillLevels: Record<string, 'beginner' | 'intermediate' | 'advanced' | 'expert'>;
+  riskTolerance: 'low' | 'medium' | 'high';
+  explainationDepth: 'brief' | 'moderate' | 'deep';
+  
+  // History patterns
+  pastProblems: ProblemSnapshot[];
+  successPatterns: string[];
+  mistakesRepeated: string[];
+  
+  // Current session context
+  timeAvailable?: 'minutes' | 'hours' | 'days';
+  toolsAvailable?: string[];
+  updatedAt: number;
+}
+
+export interface ProblemSnapshot {
+  id: string;
+  domain: string;
+  problemType: string;
+  problemFrame?: string;
+  solutionPath: string[];
+  outcome: 'resolved' | 'partially_resolved' | 'abandoned';
+  lessonsLearned: string[];
+  timestamp: number;
+}
+
+export interface PainPoint {
+  id: string;
+  category: 'blocker' | 'constraint' | 'unknown' | 'assumption' | 'misconception';
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+  identified: boolean;
+}
+
+export interface ProblemFrame {
+  primaryType: string;
+  secondaryTypes?: string[];
+  isntType: string[];  // what it's NOT
+  rootCauseCategory: string;
+  applicableDomainRules: string[];
+  reasoning: string;
+  userAgreed?: boolean;
+  confidence: number;  // 0-1
+}
+
+export interface DiagnosticQuestion {
+  id: string;
+  text: string;
+  priority: 'primary' | 'secondary' | 'optional';
+  answerOptions?: string[];
+  followUpQuestions?: Record<string, DiagnosticQuestion>;
+  narrows: string[];  // what this question narrows (problem categories)
+}
+
+export interface DiagnosticFeedback {
+  wasHelpful: boolean;
+  frameAccurate: boolean;
+  guidanceClarity: 'unclear' | 'okay' | 'clear' | 'excellent';
+  comments?: string;
+  timestamp: number;
+}
+
+export interface DomainDiagnosticModule {
+  domain: string;
+  problemTypes: ProblemType[];
+  diagnosticTree: DiagnosticNode;
+  standards: Standard[];
+  commonPitfalls: Pitfall[];
+  exampleProblems: ExampleProblem[];
+}
+
+export interface ProblemType {
+  id: string;
+  name: string;
+  indicators: string[];
+  rootCauses: string[];
+  typicalConstraints: ConstraintInfo[];
+  solutionPatterns: SolutionPattern[];
+}
+
+export interface DiagnosticNode {
+  id: string;
+  question: DiagnosticQuestion;
+  branches: {
+    yes?: string | DiagnosticNode;
+    no?: string | DiagnosticNode;
+    maybe?: string | DiagnosticNode;
+  };
+  framingIfReached: ProblemFrame;
+}
+
+export interface Standard {
+  id: string;
+  domain: string;
+  category: string;
+  description: string;
+  references: string[];
+}
+
+export interface Pitfall {
+  id: string;
+  domain: string;
+  description: string;
+  commonIn: string[];
+  howToAvoid: string;
+}
+
+export interface ExampleProblem {
+  id: string;
+  domain: string;
+  description: string;
+  baselineWas: string;
+  painPointWas: string;
+  wasFramedAs: string;
+  resolution: string;
+  lessonsLearned: string[];
+}
+
+export interface SolutionPattern {
+  id: string;
+  steps: string[];
+  successCriteria: string;
+  failureHandling: string;
+  learningGoals: string[];
+}
+
+export interface MentorAction {
+  type: 'ask' | 'explain' | 'guide' | 'loop_back' | 'confirm_frame';
+  content: string;
+  questions?: DiagnosticQuestion[];
+  guidance?: GuidanceStep[];
+  reasoning: string;
+}
+
+export interface GuidanceStep {
+  stepNumber: number;
+  action: string;
+  successCriteria: string;
+  failureHandling: string;
+  verification: string;
+}
+
+// Extend existing Message interface with diagnostic context
+export interface DiagnosticMessage extends Message {
+  diagnosticContext?: {
+    sessionId: string;
+    stage: DiagnosticStage;
+    confidence: number;
+  };
+  action?: MentorAction;
+}
