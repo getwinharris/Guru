@@ -6,6 +6,14 @@
 
 ---
 
+## CRITICAL ARCHITECTURE PRINCIPLE
+
+**User owns all data. Guru indexes locally. Never centralized.**
+
+→ See [OWNERSHIP_BOUNDARY.md](OWNERSHIP_BOUNDARY.md) for the full rule.
+
+---
+
 ## What is Guru?
 
 **The Problem Guru Solves:**
@@ -20,7 +28,7 @@ Why human mentors fail:
 
 **Guru's Solution:**
 
-A **judgment-free, patient, diagnostic mentor** that removes every barrier human mentors create.
+A **judgment-free, patient, diagnostic mentor** that removes every barrier human mentors create—**without ever owning your data**.
 
 ---
 
@@ -53,18 +61,32 @@ Traditional AI (ChatGPT, Claude):
 - But forgets history
 - Jumps to solutions
 - Generic for every domain
+- **Owns your data** ⚠️
 
 **Guru:**
 - Diagnoses problems
 - **Remembers user history** (backward retrieval)
 - **Understands domain knowledge** (forward retrieval)
 - **Customizes for intersection** (this specific user + this problem type)
+- **You own your data** ✅ (Guru indexes locally, never stores)
 
 ---
 
 ## Architecture
 
-### Three Core Services
+### Data Ownership Model (Critical)
+
+```
+YOUR FILES → Guru reads locally → Guru creates embeddings locally
+   ↑                                         ↓
+   └─────────────────── You own everything ──┘
+   
+Guru never uploads, never stores, never owns.
+```
+
+See [OWNERSHIP_BOUNDARY.md](OWNERSHIP_BOUNDARY.md) for complete architecture.
+
+### Five Core Services
 
 #### 1. **DiagnosticService** ([services/diagnosticService.ts](services/diagnosticService.ts))
 Orchestrates the 6-stage mentor loop
@@ -111,6 +133,52 @@ Maps evidence → problem type
 - Identify constraints
 - Detect misconceptions
 ```
+
+#### 4. **LocalFileService** ([services/localFileService.ts](services/localFileService.ts))
+**NEW:** Operates over user-owned files respecting ownership boundary
+
+```typescript
+- Read user's files (with permission)
+- Create file references (metadata only, no raw content)
+- Chunk files for embedding
+- Watch for file changes
+- Respect OS permissions + exclusion patterns
+```
+
+#### 5. **LocalEmbeddingService** ([services/localEmbeddingService.ts](services/localEmbeddingService.ts))
+**NEW:** Generate and store embeddings locally
+
+```typescript
+- Embed chunks with local model (never upload)
+- Build searchable index locally
+- Query index (semantic search, all local)
+- Update when files change
+- Save/load index from user's device
+```
+
+---
+
+## Data Flow (You Control Everything)
+
+```
+Your Files (on your device)
+     ↓
+[LocalFileService: read + permission check]
+     ↓
+[Chunk into semantic units]
+     ↓
+[LocalEmbeddingService: embed locally]
+     ↓
+[Store: vectors + file references locally]
+     ↓
+[Query for mentor assistance]
+     ↓
+[Guru reasons + narrates guidance]
+     ↓
+[You apply suggestions (or not)]
+```
+
+**Network traffic:** Zero (fully local) or optional (sync your index to your iCloud/Dropbox)
 
 ---
 
