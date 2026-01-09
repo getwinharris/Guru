@@ -1,4 +1,5 @@
 import { UserDiagnosticProfile, ProblemSnapshot, DomainDiagnosticModule } from '../types';
+import { getOpenWebUIAdapter } from './openWebUIAdapter';
 
 /**
  * RetrievalService: Bi-directional context retrieval
@@ -53,6 +54,27 @@ export class RetrievalService {
     domain: string,
     problemType: string
   ): Promise<ProblemSnapshot[]> {
+    const useRemote = process.env.USE_OPENWEBUI === 'true';
+    if (useRemote) {
+      try {
+        const adapter = getOpenWebUIAdapter();
+        // Query by text against a collection scoped to this user/domain
+        const collection = `${userId}-${domain}`;
+        const result = await adapter.queryByText(collection, problemType, 5);
+        // Map OpenWebUI results to ProblemSnapshot placeholders
+        const docs = (result?.documents || result?.documents?.[0] || []) as string[];
+        return docs.map((d: string, i: number) => ({
+          id: `${collection}-${i}`,
+          domain,
+          problemType,
+          description: d,
+          createdAt: Date.now(),
+        } as ProblemSnapshot));
+      } catch (e) {
+        console.error('OpenWebUI query failed:', e);
+      }
+    }
+
     // TODO: Query database with similarity search
     // Return past problems in same domain + type
     return [];
