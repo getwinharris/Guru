@@ -1,0 +1,33 @@
+
+{
+  "name": "Guru: GenAi to Learn Visually AI & Solve Anything",
+  "short_name": "Guru",
+  "description": "Interactive AI mentor for GenAI mastery, homework solving, and language learning. Your personalized Sololearn-style educational ecosystem.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
+  "categories": [
+    "education",
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=Guru&backgroundColor=0d0d0d",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=Guru&backgroundColor=0d0d0d",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
