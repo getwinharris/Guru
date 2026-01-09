@@ -32,6 +32,15 @@
    - What's been completed
    - What's next
    - Quick reference guide
+6. **[REBRANDING_COMPLETE.md](REBRANDING_COMPLETE.md)** (10 min) — **NEW**
+   - OpenWebUI rebranded as Guru's native backend
+   - Architecture changes
+   - How to use
+
+7. **[guru-backend/ARCHITECTURE.md](guru-backend/ARCHITECTURE.md)** (20 min) — **API REFERENCE**
+   - Complete system architecture
+   - All API endpoints
+   - Configuration guide
 
 ---
 
