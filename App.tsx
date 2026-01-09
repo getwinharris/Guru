@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AppState, Message, ViewMode, User, VisualHighlight, Node3D, Link3D } from './types';
+import { AppState, Message, ViewMode, User, VisualHighlight, Node3D, Link3D, DiagnosticSession } from './types';
 import { guruService } from './services/geminiService';
 import { liveService } from './services/liveService';
 import { firebaseService } from './services/firebaseService';
 import { watcherService } from './services/watcherService';
+import { guruBackendConnector } from './services/guruBackendConnector';
 import CinemaSubtitles from './components/CinemaSubtitles';
 import Sidebar from './components/Sidebar';
 import GroundingPanel from './components/GroundingPanel';
@@ -67,6 +68,11 @@ const App: React.FC = () => {
   const [activeRole, setActiveRoleState] = useState('Listener');
   const [spacialData, setSpacialData] = useState<{nodes: Node3D[], links: Link3D[]}>({nodes: [], links: []});
   
+  // DIAGNOSTIC MODE (NEW) - wired to guru-backend
+  const [diagnosticMode, setDiagnosticMode] = useState(false);
+  const [diagnosticSession, setDiagnosticSession] = useState<DiagnosticSession | null>(null);
+  const [diagnosticDomain, setDiagnosticDomain] = useState('car_repair');
+  
   const [genSettings, setGenSettings] = useState({
     aspectRatio: '16:9',
     imageSize: '1K',
@@ -83,6 +89,75 @@ const App: React.FC = () => {
     }
     init();
   }, []);
+
+  // DIAGNOSTIC MODE HANDLERS (NEW - wired to guru-backend)
+  const startDiagnosticSession = async (domain: string, problemDescription: string) => {
+    if (!currentUser) return;
+    try {
+      const session = await guruBackendConnector.createSession({
+        userId: currentUser.uid,
+        domain,
+        problemDescription
+      });
+      setDiagnosticSession(session as any);
+      setDiagnosticMode(true);
+      setAppState(AppState.THINKING);
+      setActiveRoleState('Thinker');
+    } catch (error) {
+      console.error('Failed to start diagnostic session:', error);
+      setAppState(AppState.IDLE);
+    }
+  };
+
+  const recordDiagnosticObservation = async (observation: string) => {
+    if (!diagnosticSession) return;
+    try {
+      const response = await guruBackendConnector.recordObservation({
+        sessionId: diagnosticSession.sessionId,
+        observation
+      });
+      // Add to messages as assistant response
+      const msg: Message = {
+        role: 'assistant',
+        content: `Observation recorded. Next: ${response.nextPrompt}`,
+        id: Date.now().toString(),
+        timestamp: Date.now(),
+        isGrounded: true
+      };
+      setMessages(p => [...p, msg]);
+      setAppState(AppState.IDLE);
+    } catch (error) {
+      console.error('Failed to record observation:', error);
+      setAppState(AppState.IDLE);
+    }
+  };
+
+  const recordDiagnosticBaseline = async (whatWorks: string, constraints: string) => {
+    if (!diagnosticSession) return;
+    try {
+      const response = await guruBackendConnector.recordBaseline({
+        sessionId: diagnosticSession.sessionId,
+        baseline: { whatWorks, constraints, affectedAreas: [] }
+      });
+      const msg: Message = {
+        role: 'assistant',
+        content: `Baseline established. Diagnostic questions coming next...`,
+        id: Date.now().toString(),
+        timestamp: Date.now(),
+        isGrounded: true
+      };
+      setMessages(p => [...p, msg]);
+      setAppState(AppState.IDLE);
+    } catch (error) {
+      console.error('Failed to record baseline:', error);
+      setAppState(AppState.IDLE);
+    }
+  };
+
+  const endDiagnosticMode = () => {
+    setDiagnosticMode(false);
+    setDiagnosticSession(null);
+  };
 
   const handleQuery = async (queryText: string, files?: { base64: string, type: string }[]) => {
     if (!queryText.trim() && (!files || files.length === 0)) return;
@@ -224,13 +299,23 @@ const App: React.FC = () => {
 
             <div className="px-12 py-3 bg-black/40 border-b border-white/5 flex items-center justify-between z-[140]">
                <div className="flex items-center space-x-6">
-                  {['chat', 'fast', 'image', 'video', 'edit', 'maps'].map(m => (
+                  {['chat', 'fast', 'image', 'video', 'edit', 'maps', 'diagnostic'].map(m => (
                     <button 
                       key={m} 
-                      onClick={() => setGenSettings({...genSettings, mode: m as any})}
-                      className={`text-[10px] mono font-black uppercase tracking-widest transition-all ${genSettings.mode === m ? 'text-cyan-500 underline underline-offset-8' : 'text-white/20 hover:text-white/40'}`}
+                      onClick={() => {
+                        if (m === 'diagnostic') {
+                          setDiagnosticMode(!diagnosticMode);
+                        } else {
+                          setGenSettings({...genSettings, mode: m as any});
+                        }
+                      }}
+                      className={`text-[10px] mono font-black uppercase tracking-widest transition-all ${
+                        (m === 'diagnostic' && diagnosticMode) || (m !== 'diagnostic' && genSettings.mode === m) 
+                          ? 'text-cyan-500 underline underline-offset-8' 
+                          : 'text-white/20 hover:text-white/40'
+                      }`}
                     >
-                      {m} Mode
+                      {m === 'diagnostic' ? '🔍 Mentor' : `${m} Mode`}
                     </button>
                   ))}
                </div>
