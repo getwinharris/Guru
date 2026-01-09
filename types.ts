@@ -401,3 +401,196 @@ export interface DiagnosticMessage extends Message {
   };
   action?: MentorAction;
 }
+// ============================================
+// OWNERSHIP BOUNDARY TYPES (Critical)
+// User owns data, Guru indexes and reasons over it
+// ============================================
+
+/**
+ * CRITICAL RULE: Guru never becomes the canonical holder of user memory.
+ * All user data is owned by the user; Guru only stores references + embeddings.
+ */
+
+export interface FileReference {
+  /** Canonical path to user's file (local or URI) */
+  path: string;
+  
+  /** OS-level permissions allow reading this file */
+  readable: boolean;
+  
+  /** Content hash (SHA256) for integrity checking */
+  contentHash: string;
+  
+  /** File last modified timestamp */
+  modifiedAt: number;
+  
+  /** File type: 'code' | 'document' | 'note' | 'artifact' | 'chat' | 'other' */
+  type: 'code' | 'document' | 'note' | 'artifact' | 'chat' | 'other';
+  
+  /** Language for code, format for documents */
+  language?: string;
+  
+  /** Size in bytes (for tracking) */
+  sizeBytes?: number;
+}
+
+export interface EmbeddingChunk {
+  /** Unique ID for this chunk */
+  id: string;
+  
+  /** The actual vector (never store raw content) */
+  vector: number[];
+  
+  /** Hash of original content (for verification) */
+  contentHash: string;
+  
+  /** Where this came from: file + line range */
+  source: FileReference & {
+    startLine?: number;
+    endLine?: number;
+    startChar?: number;
+    endChar?: number;
+  };
+  
+  /** What kind of content: function, class, concept, paragraph, etc. */
+  chunkType: 'function' | 'class' | 'concept' | 'paragraph' | 'code_block' | 'other';
+  
+  /** Semantic metadata extracted during embedding */
+  metadata?: {
+    keywords?: string[];
+    domain?: string;
+    importance?: 'low' | 'medium' | 'high';
+    references?: string[];  // other chunk IDs this relates to
+  };
+  
+  /** When this was embedded */
+  embeddedAt: number;
+  
+  /** When source file was read */
+  sourceReadAt: number;
+}
+
+export interface LocalMemoryIndex {
+  /** User identifier (local username or ID) */
+  userId: string;
+  
+  /** Device identifier (for multi-device scenarios) */
+  deviceId: string;
+  
+  /** All chunks currently indexed */
+  chunks: EmbeddingChunk[];
+  
+  /** File references being tracked */
+  trackedFiles: FileReference[];
+  
+  /** Semantic graph linking chunks (concept relationships) */
+  conceptGraph: ConceptLink[];
+  
+  /** Index metadata */
+  createdAt: number;
+  updatedAt: number;
+  version: string;
+  
+  /** Size of index (for diagnostics) */
+  sizeBytes: number;
+}
+
+export interface ConceptLink {
+  /** ID of source chunk */
+  fromChunk: string;
+  
+  /** ID of target chunk */
+  toChunk: string;
+  
+  /** Relationship type: 'related' | 'depends_on' | 'implements' | 'extends' | 'contradicts' */
+  relationship: 'related' | 'depends_on' | 'implements' | 'extends' | 'contradicts' | 'example_of';
+  
+  /** Strength of relationship (0-1) */
+  strength: number;
+}
+
+export interface PortableIdentity {
+  /** Username (local) */
+  username: string;
+  
+  /** Optional device keypair (for encryption) */
+  keypair?: {
+    publicKey: string;
+    /** Never store private key */
+  };
+  
+  /** Where index is stored (user-controlled location) */
+  indexLocation?: 'local' | 'icloud' | 'dropbox' | 'syncthing' | 'webdav' | 'custom';
+  
+  /** Last sync timestamp (if applicable) */
+  lastSync?: number;
+  
+  /** Devices using this identity */
+  linkedDevices?: string[];
+  
+  /** Identity created timestamp */
+  createdAt: number;
+}
+
+export interface UserPermissions {
+  /** Directories user allows Guru to index */
+  allowedPaths: string[];
+  
+  /** File types to index (or exclude) */
+  filePatterns?: {
+    include?: string[];  // glob patterns
+    exclude?: string[];  // glob patterns
+  };
+  
+  /** Whether embedding data can sync across devices */
+  allowSync: boolean;
+  
+  /** Whether Guru can watch for file changes */
+  watchForChanges: boolean;
+  
+  /** Sensitive patterns to exclude from indexing */
+  exclusionPatterns?: string[];
+  
+  /** Permissions set by user at */
+  grantedAt: number;
+}
+
+export interface IndexUpdateLog {
+  /** Files added to index */
+  filesAdded: FileReference[];
+  
+  /** Files removed from index */
+  filesRemoved: FileReference[];
+  
+  /** Files updated in index */
+  filesUpdated: FileReference[];
+  
+  /** When this update happened */
+  timestamp: number;
+  
+  /** Trigger: 'manual' | 'watch' | 'sync' | 'startup' */
+  trigger: 'manual' | 'watch' | 'sync' | 'startup';
+  
+  /** Total chunks after update */
+  totalChunks: number;
+}
+
+/**
+ * Critical constraint types that enforce ownership boundary
+ */
+export interface OwnershipBoundary {
+  /** User data lives here, Guru cannot modify */
+  userDataPath: string;
+  
+  /** Guru index lives here (local) */
+  indexPath: string;
+  
+  /** Files Guru can read (permission-based) */
+  readableFiles: string[];
+  
+  /** Files Guru CANNOT read (security/privacy) */
+  excludedFiles: string[];
+  
+  /** Last time permissions were verified */
+  permissionsCheckedAt: number;
+}
