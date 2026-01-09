@@ -593,4 +593,134 @@ export interface OwnershipBoundary {
   
   /** Last time permissions were verified */
   permissionsCheckedAt: number;
+
+// ===== LOCAL MODELS TYPES =====
+/**
+ * Model configuration for local LLM inference
+ * Defines available models: Phi-3 Mini, MobileVLM, TinyLlama
+ */
+export interface LocalModelConfig {
+  /** Unique model identifier */
+  name: 'phi-3-mini' | 'mobilevlm-3b' | 'tinyllama-1b';
+  
+  /** Human-readable name */
+  displayName: string;
+  
+  /** Size in bytes (uncompressed) */
+  sizeMB: number;
+  
+  /** Model type: reasoning (text), multimodal (text+image), or ultra-light */
+  type: 'reasoning' | 'multimodal' | 'ultra-light';
+  
+  /** Quantization level (reduces size) */
+  quantization: '4bit' | '8bit' | 'fp16';
+  
+  /** Maximum context window in tokens */
+  contextWindow: number;
+  
+  /** Typical latency on GPU (ms) */
+  latencyGPUMs: number;
+  
+  /** Typical latency on CPU (ms) */
+  latencyCPUMs: number;
+  
+  /** GitHub release URL for downloading weights */
+  downloadUrl?: string;
+  
+  /** License identifier (MIT, Apache, etc.) */
+  license: string;
+}
+
+/**
+ * Inference options for model.reason() or model.embed()
+ * Controls output quality, latency, and resource usage
+ */
+export interface InferenceOptions {
+  /** Maximum tokens to generate (default: 4096) */
+  maxTokens?: number;
+  
+  /** Sampling temperature (0.0-2.0, default: 0.7) */
+  temperature?: number;
+  
+  /** Top-P nucleus sampling (0.0-1.0, default: 0.9) */
+  topP?: number;
+  
+  /** Hard timeout in milliseconds (default: 5000) */
+  timeout?: number;
+  
+  /** Whether to stream response tokens (for UI) */
+  stream?: boolean;
+  
+  /** User-facing task description (for logging) */
+  task?: 'question_generation' | 'problem_framing' | 'evidence_analysis' | 'embedding' | 'image_analysis';
+}
+
+/**
+ * Model runtime status for monitoring and debugging
+ */
+export interface ModelRuntimeStatus {
+  /** Is model loaded and ready? */
+  initialized: boolean;
+  
+  /** Currently active model */
+  activeModel: 'phi-3-mini' | 'mobilevlm-3b' | 'tinyllama-1b';
+  
+  /** GPU available? */
+  hasGPU: boolean;
+  
+  /** Model memory footprint (MB) */
+  memoryUsageMB: number;
+  
+  /** Embedding cache size (number of cached vectors) */
+  embeddingCacheSize: number;
+  
+  /** Location where models are cached */
+  cacheDirectory: string;
+  
+  /** When model was last initialized */
+  initializedAt?: number;
+}
+
+/**
+ * Result of model inference (for structured tasks like problem framing)
+ */
+export interface InferenceResult<T = any> {
+  /** Generated content or structured result */
+  content: T;
+  
+  /** Tokens generated */
+  tokensGenerated: number;
+  
+  /** Tokens consumed from context */
+  tokensConsumed: number;
+  
+  /** Latency in milliseconds */
+  latencyMs: number;
+  
+  /** Which model was used */
+  modelUsed: string;
+  
+  /** Timestamp */
+  timestamp: number;
+}
+
+/**
+ * Image analysis result from multimodal models
+ */
+export interface ImageAnalysisResult {
+  /** Detailed description of what's in the image */
+  description: string;
+  
+  /** Identified problems or issues */
+  identifiedIssues: string[];
+  
+  /** Confidence score (0-1) */
+  confidence: number;
+  
+  /** Suggested diagnostic questions */
+  suggestedQuestions: string[];
+  
+  /** Image hash for deduplication */
+  imageHash: string;
+}
 }
