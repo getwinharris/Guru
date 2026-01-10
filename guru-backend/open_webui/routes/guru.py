@@ -8,6 +8,7 @@ Extends the RAG pipeline to support the 6-stage diagnostic mentor loop.
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 import logging
+from core.retrieval_pipeline import get_retrieval_pipeline
 
 log = logging.getLogger(__name__)
 
@@ -179,6 +180,54 @@ async def get_guided_action(payload: dict):
 # ============================================================
 # RETRIEVAL & RAG
 # ============================================================
+
+@router.post("/retrieval/execute")
+async def execute_retrieval_pipeline(payload: dict):
+    """
+    Execute full retrieval pipeline:
+    DISCOVERER → RESEARCHER → ARCHIVIST → THINKER
+    
+    Returns grounded context ready for LLM.
+    """
+    try:
+        user_id = payload.get("userId")
+        query = payload.get("query")
+        domain = payload.get("domain", "general")
+        enable_web_search = payload.get("enableWebSearch", False)
+        
+        if not user_id or not query:
+            raise HTTPException(
+                status_code=400,
+                detail="userId and query are required"
+            )
+        
+        # Execute pipeline
+        pipeline = get_retrieval_pipeline()
+        result = await pipeline.execute(
+            user_id=user_id,
+            query=query,
+            domain=domain,
+            enable_web_search=enable_web_search
+        )
+        
+        # Return pipelined result
+        return {
+            "status": result.status,
+            "query": result.query,
+            "sourceCount": result.sources_found,
+            "documentsRetrieved": result.documents_retrieved,
+            "coursesRetrieved": result.courses_retrieved,
+            "isGrounded": result.is_grounded,
+            "groundingConfidence": result.grounding_confidence,
+            "synthesisStrategy": result.synthesis_strategy,
+            "contradictions": result.contradictions,
+            "guidedQuestion": result.guided_question,
+            "nextAction": result.next_action
+        }
+    except Exception as e:
+        log.error(f"Pipeline error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/retrieval/query")
 async def query_user_history(payload: dict):
