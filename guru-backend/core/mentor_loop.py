@@ -451,9 +451,20 @@ def get_mentor_orchestrator(
     return _mentor_orchestrator
 
 
+def initialize_mentor_loop(app):
+    """
+    Initialize the mentor loop orchestrator with the FastAPI app.
+    Called during app startup.
+    """
+    orchestrator = get_mentor_orchestrator()
+    app.state.mentor_orchestrator = orchestrator
+    log.info("✓ Mentor loop orchestrator initialized")
+    return orchestrator
+
+
 __all__ = [
     "MentorStage",
     "DiagnosticSession",
     "MentorLoopOrchestrator",
     "get_mentor_orchestrator",
-]
+    "initialize_mentor_loop",
